@@ -12,7 +12,8 @@ import (
 	"github.com/J-Siu/go-png2ico/v2/p2i"
 	"golang.org/x/image/draw"
 	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -20,9 +21,25 @@ const (
 	size     = 32
 	text     = "CLI"
 	greenHex = 0x00AA00
+	fontSize = 18
 )
 
 func main() {
+	// Parse font and create face
+	parsed, err := opentype.Parse(goregular.TTF)
+	if err != nil {
+		panic(err)
+	}
+	face, err := opentype.NewFace(parsed, &opentype.FaceOptions{
+		Size:    fontSize,
+		DPI:     72,
+		Hinting: font.HintingNone,
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer face.Close()
+
 	// Create 32x32 RGBA with transparent background
 	img := image.NewRGBA(image.Rect(0, 0, size, size))
 	draw.Draw(img, img.Bounds(), &image.Uniform{color.Transparent}, image.Point{}, draw.Src)
@@ -35,15 +52,22 @@ func main() {
 		A: 255,
 	}
 
-	// Draw "CLI" centered with basicfont (approx 7x13 per char)
-	// "CLI" = 3 chars * ~7 = 21 px wide, 13 px tall
-	// Center: x = (32-21)/2 ≈ 5, y = (32+13)/2 ≈ 22 (baseline from top)
 	d := &font.Drawer{
 		Dst:  img,
 		Src:  image.NewUniform(green),
-		Face: basicfont.Face7x13,
-		Dot:  fixed.P(5, 22),
+		Face: face,
 	}
+	advance := d.MeasureString(text)
+	metrics := face.Metrics()
+	width := advance.Round()
+	height := (metrics.Ascent + metrics.Descent).Round()
+	ascent := metrics.Ascent.Round()
+
+	// Center horizontally: x = (size - width) / 2
+	// Center vertically: baseline at size/2 + ascent - height/2
+	x := fixed.I((size - width) / 2)
+	y := fixed.I(size/2 + ascent - height/2)
+	d.Dot = fixed.Point26_6{X: x, Y: y}
 	d.DrawString(text)
 
 	// Write PNG to temp file
