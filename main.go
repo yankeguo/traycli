@@ -20,9 +20,10 @@ import (
 var iconData []byte
 
 var (
-	runner     *Runner
-	statusItem *systray.MenuItem
-	stopStatus = make(chan struct{})
+	runner       *Runner
+	uptimeItem   *systray.MenuItem
+	restartsItem *systray.MenuItem
+	stopStatus   = make(chan struct{})
 )
 
 func main() {
@@ -75,8 +76,10 @@ func onReady() {
 	systray.SetTitle("CLI")
 	systray.SetTooltip("CLI")
 
-	statusItem = systray.AddMenuItem("", "")
-	statusItem.Disable()
+	uptimeItem = systray.AddMenuItem("", "")
+	uptimeItem.Disable()
+	restartsItem = systray.AddMenuItem("", "")
+	restartsItem.Disable()
 	systray.AddSeparator()
 	mConfig := systray.AddMenuItem("config.json", "Edit config")
 	mStdout := systray.AddMenuItem("stdout.txt", "Open stdout log")
@@ -126,9 +129,8 @@ func updateStatus(stop <-chan struct{}) {
 		case <-ticker.C:
 			uptime := runner.Uptime()
 			restarts := runner.Restarts()
-			status := formatDuration(uptime)
-			status += " | Restarts: " + strconv.FormatUint(restarts, 10)
-			statusItem.SetTitle(status)
+			uptimeItem.SetTitle(formatDuration(uptime))
+			restartsItem.SetTitle("Restarts: " + strconv.FormatUint(restarts, 10))
 		}
 	}
 }
