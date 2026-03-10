@@ -110,6 +110,7 @@ func onReady() {
 func onExit() {
 	if runner != nil {
 		runner.Stop()
+		runner.Wait()
 	}
 }
 

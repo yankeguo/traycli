@@ -20,17 +20,20 @@ type Runner struct {
 	startedAt time.Time
 	mu        sync.Mutex
 	cmd       *exec.Cmd
+	wg        sync.WaitGroup
 }
 
 // NewRunner creates a runner for the given command config.
 func NewRunner(cfg *Config, cc *CommandConfig) *Runner {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Runner{
+	r := &Runner{
 		cfg:    cfg,
 		cc:     cc,
 		ctx:    ctx,
 		cancel: cancel,
 	}
+	r.wg.Add(1)
+	return r
 }
 
 // Restarts returns the number of restarts so far.
@@ -51,6 +54,7 @@ func (r *Runner) Uptime() time.Duration {
 
 // Run executes the command in a loop, restarting 5 seconds after each exit.
 func (r *Runner) Run() {
+	defer r.wg.Done()
 	ensureDir(r.cfg.StdoutPath)
 	for {
 		select {
@@ -106,13 +110,18 @@ func (r *Runner) killProcess() {
 	cmd := r.cmd
 	r.mu.Unlock()
 	if cmd != nil && cmd.Process != nil {
-		cmd.Process.Kill()
+		terminateProcess(cmd)
 	}
 }
 
 // Stop signals the runner to stop.
 func (r *Runner) Stop() {
 	r.cancel()
+}
+
+// Wait blocks until Run has fully exited.
+func (r *Runner) Wait() {
+	r.wg.Wait()
 }
 
 func ensureDir(filePath string) {
