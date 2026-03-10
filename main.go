@@ -58,6 +58,7 @@ func openFile(path string) {
 		cmd = exec.Command("open", path)
 	case "windows":
 		cmd = exec.Command("cmd", "/c", "start", "", path)
+		setNoWindow(cmd) // hide cmd window to avoid flash
 	default:
 		cmd = exec.Command("xdg-open", path)
 	}
