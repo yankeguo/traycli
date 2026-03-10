@@ -10,20 +10,15 @@ import (
 
 func setNoWindow(cmd *exec.Cmd) {}
 
-func terminateProcess(cmd *exec.Cmd) {
+func gracefulStop(cmd *exec.Cmd, done <-chan struct{}) {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
 	cmd.Process.Signal(syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		cmd.Process.Wait()
-		close(done)
-	}()
 	select {
 	case <-done:
-		return
 	case <-time.After(5 * time.Second):
 		cmd.Process.Kill()
+		<-done
 	}
 }

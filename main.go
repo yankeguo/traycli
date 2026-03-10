@@ -22,6 +22,7 @@ var iconData []byte
 var (
 	runner     *Runner
 	statusItem *systray.MenuItem
+	stopStatus = make(chan struct{})
 )
 
 func main() {
@@ -99,7 +100,7 @@ func onReady() {
 			openFile(runner.cfg.StderrPath)
 		}
 	}()
-	go updateStatus()
+	go updateStatus(stopStatus)
 
 	go func() {
 		<-mQuit.ClickedCh
@@ -108,24 +109,27 @@ func onReady() {
 }
 
 func onExit() {
+	close(stopStatus)
 	if runner != nil {
 		runner.Stop()
 		runner.Wait()
 	}
 }
 
-func updateStatus() {
+func updateStatus(stop <-chan struct{}) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	for range ticker.C {
-		if runner == nil || statusItem == nil {
+	for {
+		select {
+		case <-stop:
 			return
+		case <-ticker.C:
+			uptime := runner.Uptime()
+			restarts := runner.Restarts()
+			status := formatDuration(uptime)
+			status += " | Restarts: " + strconv.FormatUint(restarts, 10)
+			statusItem.SetTitle(status)
 		}
-		uptime := runner.Uptime()
-		restarts := runner.Restarts()
-		status := formatDuration(uptime)
-		status += " | Restarts: " + strconv.FormatUint(restarts, 10)
-		statusItem.SetTitle(status)
 	}
 }
 

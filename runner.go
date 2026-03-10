@@ -59,14 +59,12 @@ func (r *Runner) Run() {
 	for {
 		select {
 		case <-r.ctx.Done():
-			r.killProcess()
 			return
 		default:
 		}
 		r.runOnce()
 		select {
 		case <-r.ctx.Done():
-			r.killProcess()
 			return
 		case <-time.After(5 * time.Second):
 			r.restarts.Add(1)
@@ -94,24 +92,31 @@ func (r *Runner) runOnce() {
 	cmd.Stderr = stderrFile
 	cmd.Stdin = nil
 
+	if err := cmd.Start(); err != nil {
+		return
+	}
+
 	r.mu.Lock()
 	r.cmd = cmd
 	r.startedAt = time.Now()
 	r.mu.Unlock()
 
-	if err := cmd.Start(); err != nil {
-		return
-	}
-	cmd.Wait()
-}
+	done := make(chan struct{})
+	go func() {
+		cmd.Wait()
+		close(done)
+	}()
 
-func (r *Runner) killProcess() {
-	r.mu.Lock()
-	cmd := r.cmd
-	r.mu.Unlock()
-	if cmd != nil && cmd.Process != nil {
-		terminateProcess(cmd)
+	select {
+	case <-r.ctx.Done():
+		gracefulStop(cmd, done)
+	case <-done:
 	}
+
+	r.mu.Lock()
+	r.cmd = nil
+	r.startedAt = time.Time{}
+	r.mu.Unlock()
 }
 
 // Stop signals the runner to stop.

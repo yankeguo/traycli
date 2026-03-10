@@ -11,9 +11,10 @@ func setNoWindow(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 }
 
-func terminateProcess(cmd *exec.Cmd) {
+func gracefulStop(cmd *exec.Cmd, done <-chan struct{}) {
 	if cmd == nil || cmd.Process == nil {
 		return
 	}
 	cmd.Process.Kill()
+	<-done
 }
