@@ -72,12 +72,18 @@ func onReady() {
 	statusItem = systray.AddMenuItem("", "")
 	statusItem.Disable()
 	systray.AddSeparator()
-	mStdout := systray.AddMenuItem("stdout", "Open stdout log")
-	mStderr := systray.AddMenuItem("stderr", "Open stderr log")
+	mConfig := systray.AddMenuItem("config.json", "Edit config")
+	mStdout := systray.AddMenuItem("stdout.txt", "Open stdout log")
+	mStderr := systray.AddMenuItem("stderr.txt", "Open stderr log")
 	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Quit traycli")
+	mQuit := systray.AddMenuItem("Quit", "Quit")
 
 	go runner.Run()
+	go func() {
+		for range mConfig.ClickedCh {
+			openFile(runner.cfg.ConfigPath)
+		}
+	}()
 	go func() {
 		for range mStdout.ClickedCh {
 			openFile(runner.cfg.StdoutPath)
