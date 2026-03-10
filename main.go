@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -20,18 +22,40 @@ func main() {
 		dialog.Message("Failed to load config: %v", err).Title("traycli Error").Error()
 		os.Exit(1)
 	}
-	command, err := ReadCommand(cfg)
+	cc, err := ReadConfig(cfg)
 	if err != nil {
-		dialog.Message("Failed to read command: %v", err).Title("traycli Error").Error()
+		dialog.Message("Failed to read config: %v", err).Title("traycli Error").Error()
 		os.Exit(1)
 	}
-	if command == "" {
-		dialog.Message("command.txt not found or empty. Please create %s with the command to run.", cfg.CommandPath).Title("traycli Error").Error()
+	if cc == nil {
+		dialog.Message("config.json not found. Creating template at %s", cfg.ConfigPath).Title("traycli Error").Error()
+		if err := WriteEmptyConfig(cfg); err != nil {
+			dialog.Message("Failed to create config: %v", err).Title("traycli Error").Error()
+			os.Exit(1)
+		}
+		openFile(cfg.ConfigPath)
+		os.Exit(1)
+	}
+	if len(cc.Cmd) == 0 {
+		dialog.Message("config.json has empty cmd. Please edit %s and add a command.", cfg.ConfigPath).Title("traycli Error").Error()
 		os.Exit(1)
 	}
 
-	runner = NewRunner(cfg, command)
+	runner = NewRunner(cfg, cc)
 	systray.Run(onReady, onExit)
+}
+
+func openFile(path string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", path)
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", path)
+	default:
+		cmd = exec.Command("xdg-open", path)
+	}
+	cmd.Run()
 }
 
 func onReady() {

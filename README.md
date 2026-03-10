@@ -5,7 +5,7 @@ A cross-platform system tray app that runs a configurable command and keeps it a
 ## Features
 
 - **Cross-platform**: Windows, macOS, Linux
-- **Simple config**: One command in `~/.traycli/command.txt`
+- **Simple config**: JSON config at `~/.traycli/config.json`
 - **Auto-restart**: Waits 5 seconds after exit, then restarts
 - **Output capture**: stdout → `~/.traycli/stdout.txt`, stderr → `~/.traycli/stderr.txt`
 - **Tray menu**: Right-click to see uptime and restart count; quit from the menu
@@ -63,21 +63,25 @@ Example `Info.plist` snippet:
 
 ## Configuration
 
-Create `~/.traycli/command.txt` with the command to run (one line, leading/trailing whitespace stripped):
+Create `~/.traycli/config.json`:
 
-```bash
-# Unix
-echo "ping -i 5 8.8.8.8" > ~/.traycli/command.txt
-
-# Windows
-echo ping -i 5 8.8.8.8 > %USERPROFILE%\.traycli\command.txt
+```json
+{
+  "cmd": ["python3", "-m", "http.server", "8080"],
+  "env": {
+    "CUSTOM_VAR": "value"
+  }
+}
 ```
 
-If `command.txt` is missing or empty, traycli shows a native error dialog and exits.
+- **cmd**: Array of strings; first element is the program, rest are arguments. Executed directly (no shell).
+- **env**: Optional key-value object. Merged into the process environment; overrides existing variables.
+
+If `config.json` is missing, traycli shows an error dialog, creates an empty template, opens it for editing, and exits.
 
 ## Usage
 
-1. Put your long-running command in `~/.traycli/command.txt`
+1. Put your command in `~/.traycli/config.json` under the `cmd` key
 2. Run `traycli` (or `traycli.exe` on Windows)
 3. Check the system tray for the traycli icon
 4. Right-click the icon:
@@ -95,6 +99,6 @@ Logs are appended across restarts.
 
 | Platform  | Notes |
 |-----------|-------|
-| **Windows** | Build with `-ldflags "-H=windowsgui"` to avoid a console window. |
+| **Windows** | Build with `-ldflags "-H=windowsgui"` to avoid a console window. Child process also runs without a visible console. |
 | **macOS**   | Use an app bundle with `LSUIElement` to hide from the Dock. |
 | **Linux**   | Requires GTK3 and AppIndicator; may need a system tray implementation. |

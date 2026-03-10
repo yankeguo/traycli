@@ -8,14 +8,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"runtime"
 )
 
 // Runner executes a command with stdout/stderr redirection and restart on exit.
 type Runner struct {
 	cfg       *Config
-	command   string
+	cc        *CommandConfig
 	ctx       context.Context
 	cancel    context.CancelFunc
 	restarts  atomic.Uint64
@@ -24,14 +22,14 @@ type Runner struct {
 	cmd       *exec.Cmd
 }
 
-// NewRunner creates a runner for the given command.
-func NewRunner(cfg *Config, command string) *Runner {
+// NewRunner creates a runner for the given command config.
+func NewRunner(cfg *Config, cc *CommandConfig) *Runner {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Runner{
-		cfg:     cfg,
-		command: command,
-		ctx:     ctx,
-		cancel:  cancel,
+		cfg:    cfg,
+		cc:     cc,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
@@ -73,13 +71,9 @@ func (r *Runner) Run() {
 }
 
 func (r *Runner) runOnce() {
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/c", r.command)
-	} else {
-		cmd = exec.Command("sh", "-c", r.command)
-	}
-	cmd.Env = os.Environ()
+	cmd := exec.Command(r.cc.Cmd[0], r.cc.Cmd[1:]...)
+	cmd.Env = buildEnv(os.Environ(), r.cc.Env)
+	setNoWindow(cmd)
 
 	stdoutFile, err := os.OpenFile(r.cfg.StdoutPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
@@ -124,4 +118,35 @@ func (r *Runner) Stop() {
 func ensureDir(filePath string) {
 	dir := filepath.Dir(filePath)
 	os.MkdirAll(dir, 0755)
+}
+
+func buildEnv(base []string, overrides map[string]string) []string {
+	if len(overrides) == 0 {
+		return base
+	}
+	overrideKeys := make(map[string]bool)
+	for k := range overrides {
+		overrideKeys[k] = true
+	}
+	var result []string
+	for _, s := range base {
+		key := envKey(s)
+		if key != "" && overrideKeys[key] {
+			continue
+		}
+		result = append(result, s)
+	}
+	for k, v := range overrides {
+		result = append(result, k+"="+v)
+	}
+	return result
+}
+
+func envKey(env string) string {
+	for i := 0; i < len(env); i++ {
+		if env[i] == '=' {
+			return env[:i]
+		}
+	}
+	return ""
 }
