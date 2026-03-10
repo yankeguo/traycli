@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -57,8 +59,10 @@ func openFile(path string) {
 	case "darwin":
 		cmd = exec.Command("open", path)
 	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "", path)
-		setNoWindow(cmd) // hide cmd window to avoid flash
+		// Use file:// URL for reliable opening with default app
+		abs, _ := filepath.Abs(path)
+		fileURL := "file:///" + strings.ReplaceAll(filepath.ToSlash(abs), " ", "%20")
+		cmd = exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", fileURL)
 	default:
 		cmd = exec.Command("xdg-open", path)
 	}
