@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"os"
 	"os/exec"
 	"runtime"
@@ -10,6 +11,11 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/sqweek/dialog"
 )
+
+//go:generate go run ./scripts/genicon
+
+//go:embed icon.ico
+var iconData []byte
 
 var (
 	runner     *Runner
@@ -59,8 +65,9 @@ func openFile(path string) {
 }
 
 func onReady() {
-	systray.SetTitle("traycli")
-	systray.SetTooltip("traycli")
+	systray.SetIcon(iconData)
+	systray.SetTitle("CLI")
+	systray.SetTooltip("CLI")
 
 	statusItem = systray.AddMenuItem("", "")
 	statusItem.Disable()
