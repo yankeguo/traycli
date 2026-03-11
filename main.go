@@ -86,6 +86,7 @@ func onReady() {
 	mStderr := systray.AddMenuItem("stderr.txt", "Open stderr log")
 	systray.AddSeparator()
 	mRestart := systray.AddMenuItem("Restart", "Restart the process")
+	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit")
 
 	go runner.Run()
