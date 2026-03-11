@@ -85,6 +85,7 @@ func onReady() {
 	mStdout := systray.AddMenuItem("stdout.txt", "Open stdout log")
 	mStderr := systray.AddMenuItem("stderr.txt", "Open stderr log")
 	systray.AddSeparator()
+	mRestart := systray.AddMenuItem("Restart", "Restart the process")
 	mQuit := systray.AddMenuItem("Quit", "Quit")
 
 	go runner.Run()
@@ -105,6 +106,11 @@ func onReady() {
 	}()
 	go updateStatus(stopStatus)
 
+	go func() {
+		for range mRestart.ClickedCh {
+			runner.Restart()
+		}
+	}()
 	go func() {
 		<-mQuit.ClickedCh
 		systray.Quit()

@@ -21,16 +21,18 @@ type Runner struct {
 	mu        sync.Mutex
 	cmd       *exec.Cmd
 	wg        sync.WaitGroup
+	restartCh chan struct{}
 }
 
 // NewRunner creates a runner for the given command config.
 func NewRunner(cfg *Config, cc *CommandConfig) *Runner {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Runner{
-		cfg:    cfg,
-		cc:     cc,
-		ctx:    ctx,
-		cancel: cancel,
+		cfg:       cfg,
+		cc:        cc,
+		ctx:       ctx,
+		cancel:    cancel,
+		restartCh: make(chan struct{}, 1),
 	}
 	r.wg.Add(1)
 	return r
@@ -66,6 +68,8 @@ func (r *Runner) Run() {
 		select {
 		case <-r.ctx.Done():
 			return
+		case <-r.restartCh:
+			r.restarts.Add(1)
 		case <-time.After(5 * time.Second):
 			r.restarts.Add(1)
 		}
@@ -117,6 +121,20 @@ func (r *Runner) runOnce() {
 	r.cmd = nil
 	r.startedAt = time.Time{}
 	r.mu.Unlock()
+}
+
+// Restart kills the current process and immediately relaunches it.
+func (r *Runner) Restart() {
+	select {
+	case r.restartCh <- struct{}{}:
+	default:
+	}
+	r.mu.Lock()
+	cmd := r.cmd
+	r.mu.Unlock()
+	if cmd != nil && cmd.Process != nil {
+		cmd.Process.Kill()
+	}
 }
 
 // Stop signals the runner to stop.
