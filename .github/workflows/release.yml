@@ -36,6 +36,18 @@ jobs:
             -ldflags "-H=windowsgui -s -w" \
             -o traycli-windows-arm64.exe .
 
+      - name: Build Linux amd64
+        run: |
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags "-s -w" \
+            -o traycli-linux-amd64 .
+
+      - name: Build Linux arm64
+        run: |
+          GOOS=linux GOARCH=arm64 go build \
+            -ldflags "-s -w" \
+            -o traycli-linux-arm64 .
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -50,10 +62,19 @@ jobs:
             | x64 (amd64) | traycli-windows-amd64.exe |
             | ARM64 | traycli-windows-arm64.exe |
 
+            ### Linux
+
+            | Arch | File |
+            |------|------|
+            | x64 (amd64) | traycli-linux-amd64 |
+            | ARM64 | traycli-linux-arm64 |
+
             Build from tag: ${{ github.sha }}
           files: |
             traycli-windows-amd64.exe
             traycli-windows-arm64.exe
+            traycli-linux-amd64
+            traycli-linux-arm64
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
