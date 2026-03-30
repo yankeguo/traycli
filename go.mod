@@ -6,7 +6,7 @@ require (
 	github.com/J-Siu/go-png2ico/v2 v2.0.5
 	github.com/getlantern/systray v1.2.2
 	github.com/sqweek/dialog v0.0.0-20260123140253-64c163d53aac
-	golang.org/x/image v0.36.0
+	golang.org/x/image v0.38.0
 )
 
 require (
@@ -22,5 +22,5 @@ require (
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/text v0.35.0 // indirect
 )
